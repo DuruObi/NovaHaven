@@ -15,10 +15,12 @@ import Forum from "./pages/Forum";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import AdminDashboard from "./pages/AdminDashboard";
+import { Analytics } from "@vercel/analytics/react"
 
 const App: React.FC = () => {
   return (
     <Router>
+      <Analytics />
       <Navbar />
 
       <Routes>
