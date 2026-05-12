@@ -1,78 +1,91 @@
 import { useEffect, useState } from "react";
 import API from "../api";
 
-interface Post {
-  _id: string;
-  title: string;
-  content: string;
-  author: string;
-}
+const AdminDashboard = () => {
+  const [posts, setPosts] = useState([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-function AdminDashboard() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [comicsCount, setComicsCount] = useState(0);
   const [comicForm, setComicForm] = useState({
     chapterNumber: "",
     title: "",
     description: "",
-    imageUrl: "",
   });
 
   // LOAD POSTS
   const fetchPosts = async () => {
-    const res = await API.get("/forum");
-    setPosts(res.data);
-  };
-
-  // LOAD COMICS COUNT
-  const fetchComicsCount = async () => {
-    const res = await API.get("/comics");
-    setComicsCount(res.data.length);
+    try {
+      const res = await API.get("/forum");
+      setPosts(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      await fetchPosts();
-      await fetchComicsCount();
-    };
-
-    loadData();
+    fetchPosts();
   }, []);
 
   // DELETE POST
   const deletePost = async (id: string) => {
-    await API.delete(`/forum/${id}`);
-    fetchPosts();
+    try {
+      await API.delete(`/forum/${id}`);
+      fetchPosts();
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  // CREATE COMIC CHAPTER
-  const uploadComic = async (e) => {
+  // UPLOAD COMIC CHAPTER WITH CLOUDINARY IMAGE
+  const uploadComic = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const payload = {
-      chapterNumber: Number(comicForm.chapterNumber),
-      title: comicForm.title,
-      description: comicForm.description,
-      pages: [
-        {
-          imageUrl: comicForm.imageUrl,
-          pageNumber: 1,
+    try {
+      if (!selectedFile) {
+        alert("Please select a comic image first");
+        return;
+      }
+
+      // STEP 1: Upload image to Cloudinary through backend
+      const formData = new FormData();
+      formData.append("image", selectedFile);
+
+      const uploadRes = await API.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      ],
-    };
+      });
 
-    await API.post("/comics", payload);
+      const uploadedImageUrl = uploadRes.data.imageUrl;
 
-    alert("Comic chapter uploaded!");
+      // STEP 2: Create comic chapter using uploaded image URL
+      const payload = {
+        chapterNumber: Number(comicForm.chapterNumber),
+        title: comicForm.title,
+        description: comicForm.description,
+        pages: [
+          {
+            imageUrl: uploadedImageUrl,
+            pageNumber: 1,
+          },
+        ],
+      };
 
-    setComicForm({
-      chapterNumber: "",
-      title: "",
-      description: "",
-      imageUrl: "",
-    });
+      await API.post("/comics", payload);
 
-    fetchComicsCount();
+      alert("Comic chapter uploaded successfully!");
+
+      // RESET FORM
+      setComicForm({
+        chapterNumber: "",
+        title: "",
+        description: "",
+      });
+
+      setSelectedFile(null);
+    } catch (error) {
+      console.log(error);
+      alert("Upload failed");
+    }
   };
 
   return (
@@ -87,7 +100,7 @@ function AdminDashboard() {
         </div>
 
         <div className="stat-card">
-          <h3>{comicsCount}</h3>
+          <h3>12</h3>
           <p>Comic Chapters</p>
         </div>
 
@@ -103,6 +116,7 @@ function AdminDashboard() {
 
         <form onSubmit={uploadComic}>
           <input
+            type="number"
             placeholder="Chapter Number"
             value={comicForm.chapterNumber}
             onChange={(e) =>
@@ -114,6 +128,7 @@ function AdminDashboard() {
           />
 
           <input
+            type="text"
             placeholder="Chapter Title"
             value={comicForm.title}
             onChange={(e) =>
@@ -136,14 +151,13 @@ function AdminDashboard() {
           />
 
           <input
-            placeholder="Comic Image URL"
-            value={comicForm.imageUrl}
-            onChange={(e) =>
-              setComicForm({
-                ...comicForm,
-                imageUrl: e.target.value,
-              })
-            }
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                setSelectedFile(e.target.files[0]);
+              }
+            }}
           />
 
           <button type="submit">Upload Chapter</button>
@@ -154,7 +168,7 @@ function AdminDashboard() {
       <section className="admin-posts">
         <h3>Manage Forum Posts</h3>
 
-        {posts.map((post) => (
+        {posts.map((post: any) => (
           <div key={post._id} className="admin-post-card">
             <h4>{post.title}</h4>
             <p>{post.content}</p>
@@ -168,6 +182,6 @@ function AdminDashboard() {
       </section>
     </div>
   );
-}
+};
 
 export default AdminDashboard;
