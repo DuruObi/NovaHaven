@@ -1,8 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import API from "../api";
 
+type Post = {
+  _id: string;
+  title: string;
+  content: string;
+  author: string;
+};
+
 const AdminDashboard = () => {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [comicForm, setComicForm] = useState({
@@ -22,7 +29,11 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchPosts();
+    const loadPosts = async () => {
+      await fetchPosts();
+    };
+
+    loadPosts();
   }, []);
 
   // DELETE POST
@@ -36,7 +47,7 @@ const AdminDashboard = () => {
   };
 
   // UPLOAD COMIC CHAPTER WITH CLOUDINARY IMAGE
-  const uploadComic = async (e: React.FormEvent) => {
+  const uploadComic = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
@@ -153,6 +164,7 @@ const AdminDashboard = () => {
           <input
             type="file"
             accept="image/*"
+            aria-label="Comic image file"
             onChange={(e) => {
               if (e.target.files && e.target.files[0]) {
                 setSelectedFile(e.target.files[0]);
@@ -168,7 +180,7 @@ const AdminDashboard = () => {
       <section className="admin-posts">
         <h3>Manage Forum Posts</h3>
 
-        {posts.map((post: any) => (
+        {posts.map((post: Post) => (
           <div key={post._id} className="admin-post-card">
             <h4>{post.title}</h4>
             <p>{post.content}</p>
